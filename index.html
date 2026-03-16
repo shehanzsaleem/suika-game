@@ -36,7 +36,11 @@
       width: 100%;
       max-width: 640px;
       margin: 0 auto;
-      height: 100vh;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
     #game-canvas {
@@ -55,14 +59,7 @@
     }
 
     #game-score {
-      position: absolute;
-      width: 100%;
-      border-bottom: 2px dotted #333;
-      font-size: 84px;
-      font-weight: 900;
-      padding-left: 16px;
-      color: var(--col-bg-lighter);
-      text-shadow: 3px 3px 0 var(--col-primary), -3px -3px 0 var(--col-primary), -3px 3px 0 var(--col-primary), 3px -3px 0 var(--col-primary);
+      display: none;
     }
 
     #game-end-container {
@@ -118,22 +115,28 @@
       height: 48px;
       background-color: var(--col-bg-lighter);
       display: flex;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .game-status-item {
       display: flex;
       line-height: 1;
       align-items: center;
-      margin-right: 32px;
+      margin-right: 24px;
+    }
+
+    .game-status-item:first-child .game-status-label {
+      margin-left: 16px;
     }
 
     .game-status-label {
       color: #666;
       font-size: 16px;
-      margin-left: 24px;
-      margin-right: 8px;
+      margin-right: 6px;
     }
 
+    #game-score-value,
     #game-highscore-value {
       color: #333;
       font-weight: 700;
@@ -144,13 +147,51 @@
       width: 24px;
       height: 24px;
     }
+
+    /* Danger line: visible horizontal line near top; overflow above this triggers loss after grace period */
+    #danger-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--col-primary-dark);
+      box-shadow: 0 0 8px rgba(255, 39, 0, 0.6);
+      pointer-events: none;
+      display: none;
+    }
+
+    /* Fruit progression panel: static row of fruit icons under the game board */
+    .fruit-progression-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px 8px;
+      padding: 12px 16px;
+      background: var(--col-bg-lighter);
+      border-top: 2px solid var(--col-primary);
+    }
+    .fruit-progression-item {
+      display: inline-flex;
+    }
+    .fruit-progression-icon {
+      display: block;
+    }
+    .fruit-progression-arrow {
+      color: var(--col-primary);
+      font-size: 20px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="game-container">
     <div id="game-canvas">
       <div id="game-ui">
-        <p id="game-score"></p>
+        <p id="game-score" aria-hidden="true"></p>
+
+        <!-- Danger line: fruits above this for too long trigger game over -->
+        <div id="danger-line" class="danger-line" aria-hidden="true"></div>
 
         <div id="game-end-container">
           <div id="game-end">
@@ -161,18 +202,27 @@
 
         <div id="game-status">
           <div class="game-status-item">
-            <div class="game-status-label">Highscore</div>
+            <span class="game-status-label">Score</span>
+            <div id="game-score-value">0</div>
+          </div>
+          <div class="game-status-item">
+            <span class="game-status-label">Highscore</span>
             <div id="game-highscore-value">0</div>
           </div>
           <div class="game-status-item">
-            <div class="game-status-label">Next</div>
-            <img id="game-next-fruit" src="./assets/img/circle0.png" />
+            <span class="game-status-label">Next</span>
+            <img id="game-next-fruit" src="./assets/img/circle0.png" alt="" />
           </div>
         </div>
       </div>
     </div>
+    <!-- Fruit progression chain is injected here by FruitProgressionPanel.js -->
   </div>
   <script type="text/javascript" src="./matter.js"></script>
-  <script type="text/javascript" src="./index.js?v=4"></script>
+  <script type="text/javascript" src="./logic/fruitFactory.js"></script>
+  <script type="text/javascript" src="./index.js?v=5"></script>
+  <script type="text/javascript" src="./logic/dangerLineLogic.js"></script>
+  <script type="text/javascript" src="./components/FruitProgressionPanel.js"></script>
+  <script type="text/javascript" src="./agents/RandomDropAgent.js"></script>
 </body>
 </html>

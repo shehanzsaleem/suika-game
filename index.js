@@ -37,10 +37,13 @@ const GameStates = {
 const Game = {
 	width: 640,
 	height: 960,
+	/** Used by FruitFactory when creating fruit bodies (bounce, roll, stack). */
+	defaultFriction: friction,
 	elements: {
 		canvas: document.getElementById('game-canvas'),
 		ui: document.getElementById('game-ui'),
 		score: document.getElementById('game-score'),
+		scoreValue: document.getElementById('game-score-value'),
 		end: document.getElementById('game-end-container'),
 		endTitle: document.getElementById('game-end-title'),
 		statusValue: document.getElementById('game-highscore-value'),
@@ -74,7 +77,8 @@ const Game = {
 		}, 0);
 
 		Game.score = score;
-		Game.elements.score.innerText = Game.score;
+		if (Game.elements.score) Game.elements.score.innerText = Game.score;
+		if (Game.elements.scoreValue) Game.elements.scoreValue.innerText = Game.score;
 	},
 
 	fruitSizes: [
@@ -178,14 +182,7 @@ const Game = {
 				// Skip if collision is wall
 				if (bodyA.isStatic || bodyB.isStatic) continue;
 
-				const aY = bodyA.position.y + bodyA.circleRadius;
-				const bY = bodyB.position.y + bodyB.circleRadius;
-
-				// Uh oh, too high!
-				if (aY < loseHeight || bY < loseHeight) {
-					Game.loseGame();
-					return;
-				}
+				// Loss is handled by danger line + grace-period timer (dangerLineLogic.js), not here.
 
 				// Skip different sizes
 				if (bodyA.sizeIndex !== bodyB.sizeIndex) continue;
@@ -216,6 +213,24 @@ const Game = {
 				Game.calculateScore();
 			}
 		});
+
+		// Danger line: loss when a fruit stays above the line for the grace period (logic/dangerLineLogic.js)
+		if (typeof DangerLineLogic !== 'undefined') {
+			DangerLineLogic.init(engine, Game, {
+				dangerLineY: 120,
+				gracePeriodMs: 1500,
+				dangerLineElementId: 'danger-line'
+			});
+		}
+		// Fruit progression display under the board (components/FruitProgressionPanel.js)
+		if (typeof FruitProgressionPanel !== 'undefined') {
+			FruitProgressionPanel.init('#game-container', Game);
+		}
+		// Auto-play agent: drops fruits at random positions every 1–3 s (agents/RandomDropAgent.js)
+		if (typeof RandomDropAgent !== 'undefined') {
+			RandomDropAgent.init(Game, runner, GameStates, { wallPad });
+			RandomDropAgent.start();
+		}
 	},
 
 	addPop: function (x, y, r) {
@@ -242,6 +257,7 @@ const Game = {
 		Game.stateIndex = GameStates.LOSE;
 		Game.elements.end.style.display = 'flex';
 		runner.enabled = false;
+		if (typeof RandomDropAgent !== 'undefined') RandomDropAgent.stop();
 		Game.saveHighscore();
 	},
 
@@ -254,7 +270,11 @@ const Game = {
 		return sizeIndex;
 	},
 
+	/** Creates a fruit physics body (circle). Uses FruitFactory when available for id, fruitType, radius, scoreValue, nextFruitType. */
 	generateFruitBody: function (x, y, sizeIndex, extraConfig = {}) {
+		if (typeof FruitFactory !== 'undefined') {
+			return FruitFactory.create(Game, x, y, sizeIndex, extraConfig);
+		}
 		const size = Game.fruitSizes[sizeIndex];
 		const circle = Bodies.circle(x, y, size.radius, {
 			...friction,
@@ -263,7 +283,6 @@ const Game = {
 		});
 		circle.sizeIndex = sizeIndex;
 		circle.popped = false;
-
 		return circle;
 	},
 
